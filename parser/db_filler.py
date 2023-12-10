@@ -11,10 +11,6 @@ from app.models.models import Category
 # парсим данные по существующим категориям
 # 1) какие категории существуют
 
-def write_to_db(obj_fields: list):
-    fields_str = list(map(str, obj_fields))
-    print(",".join(fields_str))
-
 
 def get_child_info(sub_cat):
     cat_obj = Category(wb_id=sub_cat.get("id"),
