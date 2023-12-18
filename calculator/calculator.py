@@ -1,36 +1,32 @@
+import os
+from sqlmodel import Field, SQLModel, SQLModel, Session, create_engine
 from fastapi import FastAPI, Depends, HTTPException
-from sqlalchemy import create_engine, Column, Integer, String
-from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy_orm.session import Session
 
-my_database_connection = "postgresql://postgres:Olofmeister1337@localhost:5432/wildberries_commissions"
-engine = create_engine(my_database_connection)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+DATABASE_URL = os.environ.get("DATABASE_URL")
+engine = create_engine(DATABASE_URL, echo=True)
 
 
-class Commissions(Base):
-    __tablename__ = "commissions"
-    category = Column(String(256))
-    product_name = Column(String(256), primary_key=True)
-    wb_commission = Column(Integer)
-    wb_commission_seller = Column(Integer)
+class Commissions(SQLModel, table=True):
+    category: [str]
+    product_name: [str] = Field(default=None, primary_key=True)
+    wb_commission: [int]
+    wb_commission_seller: [int]
 
 
-Base.metadata.create_all(bind=engine)
 app = FastAPI()
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+def init_db():
+    SQLModel.metadata.create_all(engine)
+
+
+def get_session():
+    with Session(engine) as session:
+        yield session
 
 
 @app.get("/")
-def get_commission(cost: float, product_name: str, is_wb_commission: bool, is_seller_commission: bool, db: Session = Depends(get_db)):
+def get_commission(cost: float, product_name: str, is_wb_commission: bool, is_seller_commission: bool, db: Session = Depends(get_session)):
     try:
         commission = db.query(Commissions).filter(Commissions.product_name == product_name).first()
         if is_wb_commission:
