@@ -1,17 +1,23 @@
+import datetime
+
 import requests
 import json
 
 from sqlmodel import Session
 
 from app.models.db import engine
-from parser.urls import ALL_CATEGORIES
+from parser.urls import ALL_CATEGORIES, NOMS, QNT
 from parser.constants import HEADERS
-from app.models.models import Category
+from app.models.models import Category, Nomenclature, Amount
+
 
 # парсим данные по существующим категориям
 # 1) какие категории существуют
 
-
+def get_category(skip=0, limit=1):
+    with Session(engine) as session:
+        category = session.query(Category).offset(skip).limit(limit).first()
+        return category
 def get_child_info(sub_cat):
     cat_obj = Category(wb_id=sub_cat.get("id"),
                        parent=sub_cat.get("parent"),
@@ -35,7 +41,7 @@ def get_child_info(sub_cat):
         return
 
 
-def fill_db():
+def fill_categories():
     response = requests.get(ALL_CATEGORIES,
                             headers=HEADERS,
                             verify=False)
@@ -49,3 +55,107 @@ def fill_db():
     # id, name, url, shard, query, childs
     # Child
     # id, parent, name, seo, url, shard, query
+
+def fill_first_ten_categories_nomenclature():
+    skip = 1
+    bad_categories_count = 0
+    while skip != 10:
+        category = get_category(skip=skip+bad_categories_count, limit=1)
+        try:
+            # не можем выполнить запрос для самых верхних категорий
+            # например первая категория shard=blackhole, cat=306
+            fill_nomenclature(shard=category.shard, cat=category.query)
+            skip += 1
+        except Exception:
+            bad_categories_count +=1
+
+def fill_db():
+    #fill_categories()
+    #fill_first_ten_categories_nomenclature()
+    # заполняем товары по первым 10 категориям
+    date = datetime.datetime.now()
+    skip = 0
+    limit = 10
+    with Session(engine) as session:
+        nomenclatures = session.query(Nomenclature).offset(skip).limit(limit).all()
+        nms_list = [str(nm.id) for nm in nomenclatures]
+        nms = ";".join(nms_list)
+        fill_amount(nm_ids=nms,date=date)
+
+
+def fill_nomenclature(pages=1, shard="sweatshirts_hoodies", cat="cat=8141"):
+    page_number = 1
+    while page_number <= pages:
+        noms_url = NOMS.substitute(shard=shard, cat=cat, page_number=page_number)
+        response = requests.get(noms_url,
+                                headers=HEADERS,
+                                verify=False)
+        data = json.loads(response.text).get("data").get("products")
+
+        if not data:
+            return
+
+        noms_list = []
+
+        for nom in data:
+            nom_obj = Nomenclature(
+                id=nom.get("id"),
+                category_id=cat[4:],
+                root=nom.get("root"),
+                brand=nom.get("brand"),
+                brandId=nom.get("brandId"),
+                siteBrandId=nom.get("siteBrandId"),
+                name=nom.get("name"),
+                supplier=nom.get("supplier"),
+                supplierId=nom.get("supplierId"),
+                supplierRating=nom.get("supplierRating"),
+                priceU=nom.get("priceU"),
+                salePriceU=nom.get("salePriceU"),
+                sale=nom.get("sale"),
+                logistricsCost=nom.get("logistricsCost"),
+                returnCost=nom.get("returnCost"),
+                diffPrice=nom.get("diffPrice"),
+                pics=nom.get("pics"),
+                rating=nom.get("rating"),
+                reviewRating=nom.get("reviewRating"),
+                feedbacks=nom.get("feedbacks"),
+                volume=nom.get("volume")
+            )
+            noms_list.append(nom_obj)
+
+        with Session(engine) as session:
+            session.add_all(noms_list)
+            session.commit()
+
+        page_number += 1
+
+def fill_amount(nm_ids, date):
+    qnt_url = QNT.substitute(NM=nm_ids)
+    response = requests.get(qnt_url,
+                            headers=HEADERS,
+                            verify=False)
+    products = json.loads(response.text).get("data").get("products")
+    if not products:
+        return
+
+    for product in products:
+        nm_id = product.get("id")
+        price = product.get("salePriceU")
+        stocks = product.get("sizes")[0].get("stocks")
+        wh_list = []
+
+        for size in stocks:
+            Amount(nom_id=nm_id,
+                   wh=size.get("wh"),
+                   qty=size.get("qty"),
+                   price=price,
+                   date=date)
+            wh_list.append(Amount)
+
+        with Session(engine) as session:
+            session.add_all(wh_list)
+            session.commit()
+
+if __name__ == "__main__":
+    fill_db()
+    #fill_amount(146627850, datetime.datetime.now())

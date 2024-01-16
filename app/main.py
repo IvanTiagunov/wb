@@ -8,7 +8,7 @@ from app.models.models import Category
 
 def start_up():
     init_db()
-    fill_db()
+    #fill_db()
 
 app = FastAPI(on_startup=start_up())
 
