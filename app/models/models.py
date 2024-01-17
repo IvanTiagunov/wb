@@ -57,3 +57,9 @@ class Amount(SQLModel, table=True):
     qty: int
     price: int
     date: datetime
+
+class Commissions(SQLModel, table=True):
+    category: str
+    product_name: str = Field(primary_key=True)
+    wb_commission: int
+    wb_commission_seller: int

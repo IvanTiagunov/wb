@@ -6,6 +6,7 @@ import json
 from sqlmodel import Session, select
 
 from app.models.db import engine
+from config import PATH_TO_XLSX
 from parser.urls import ALL_CATEGORIES, NOMS, QNT
 from parser.constants import HEADERS
 from app.models.models import Category, Nomenclature, Amount
@@ -162,5 +163,20 @@ def fill_amount(nm_ids, date):
             session.add_all(wh_list)
             session.commit()
 
+
+def fill_comissions():
+    import pandas as pd
+    excel_file_path = PATH_TO_XLSX
+    df = pd.read_excel(excel_file_path)
+    df.to_sql('commissions', engine, index=False, if_exists='replace')
+
 if __name__ == "__main__":
     fill_db()
+    # skip = 0
+    # limit = 10
+    # with Session(engine) as session:
+    #     query = select(Amount).offset(skip).limit(limit)
+    #     result = session.exec(query).all()
+    #     print(result)
+    #fill_comissions()
+
