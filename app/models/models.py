@@ -53,6 +53,6 @@ class Amount(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     nm_id: int = Field(default=None, foreign_key="nomenclature.id")
     wh: int
-    qnt: int
+    qty: int
     price: int
     date: datetime

@@ -3,7 +3,7 @@ import datetime
 import requests
 import json
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.models.db import engine
 from parser.urls import ALL_CATEGORIES, NOMS, QNT
@@ -76,11 +76,14 @@ def fill_db():
     date = datetime.datetime.now()
     skip = 0
     limit = 10
-    with Session(engine) as session:
-        nomenclatures = session.query(Nomenclature).offset(skip).limit(limit).all()
-        nms_list = [str(nm.id) for nm in nomenclatures]
-        nms = ";".join(nms_list)
-        fill_amount(nm_ids=nms,date=date)
+    while skip < 1000:
+        with Session(engine) as session:
+            query = select(Nomenclature).offset(skip).limit(limit)
+            nomenclatures = session.exec(query).all()
+            nms_list = [str(nm.id) for nm in nomenclatures]
+            nms = ";".join(nms_list)
+            fill_amount(nm_ids=nms,date=date)
+        skip+=10
 
 
 def fill_nomenclature(pages=1, shard="sweatshirts_hoodies", cat="cat=8141"):
@@ -145,12 +148,12 @@ def fill_amount(nm_ids, date):
         wh_list = []
 
         for size in stocks:
-            Amount(nom_id=nm_id,
+            amount = Amount(nm_id=nm_id,
                    wh=size.get("wh"),
                    qty=size.get("qty"),
                    price=price,
                    date=date)
-            wh_list.append(Amount)
+            wh_list.append(amount)
 
         with Session(engine) as session:
             session.add_all(wh_list)
