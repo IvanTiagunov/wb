@@ -82,12 +82,12 @@ def fill_db():
             nomenclatures = session.exec(query).all()
             nms_list = [str(nm.id) for nm in nomenclatures]
             nms = ";".join(nms_list)
-            fill_amount(nm_ids=nms,date=date)
+            fill_amount(nm_ids=nms, date=date)
         skip+=10
 
 
 def fill_nomenclature(pages=1, shard="sweatshirts_hoodies", cat="cat=8141"):
-    page_number = 1
+    page_number = 10
     while page_number <= pages:
         noms_url = NOMS.substitute(shard=shard, cat=cat, page_number=page_number)
         response = requests.get(noms_url,
@@ -144,16 +144,19 @@ def fill_amount(nm_ids, date):
     for product in products:
         nm_id = product.get("id")
         price = product.get("salePriceU")
-        stocks = product.get("sizes")[0].get("stocks")
+        sizes = product.get("sizes")
         wh_list = []
-
-        for size in stocks:
-            amount = Amount(nm_id=nm_id,
-                   wh=size.get("wh"),
-                   qty=size.get("qty"),
-                   price=price,
-                   date=date)
-            wh_list.append(amount)
+        for size in sizes:
+            stocks = size.get("stocks")
+            name = size.get("name")
+            for stock in stocks:
+                amount = Amount(nm_id=nm_id,
+                                name=name,
+                                wh=stock.get("wh"),
+                                qty=stock.get("qty"),
+                                price=price,
+                                date=date)
+                wh_list.append(amount)
 
         with Session(engine) as session:
             session.add_all(wh_list)
@@ -161,4 +164,3 @@ def fill_amount(nm_ids, date):
 
 if __name__ == "__main__":
     fill_db()
-    #fill_amount(146627850, datetime.datetime.now())

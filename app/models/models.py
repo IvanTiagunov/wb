@@ -52,6 +52,7 @@ class Nomenclature(SQLModel, table=True):
 class Amount(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     nm_id: int = Field(default=None, foreign_key="nomenclature.id")
+    name: str
     wh: int
     qty: int
     price: int
