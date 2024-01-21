@@ -1,6 +1,6 @@
-from datetime import timedelta, date, datetime
+import threading
 import time
-
+from datetime import timedelta, datetime
 import psycopg2
 import schedule
 
@@ -45,6 +45,7 @@ def calculations():
 
 
 def Update():
+    print("did calculations")
     conn = psycopg2.connect(
         database="wb",
         user="admin",
@@ -69,19 +70,26 @@ def Update():
     for row in results:
         nm_id, difference = row
         update_query = f"UPDATE sellercalculations SET sells = {difference*-1}  WHERE articul = '{nm_id}'"
-        cursor.execute(sql_query)
+        cursor.execute(update_query)
         conn.commit()
+        print("did update")
     cursor.close()
     conn.close()
 
+
 def schedule_update():
     # Планирование выполнения обновления каждый день в определенное время (здесь приведен пример для 12:00)
-    schedule.every().day.at("05:00").do(Update)
+    schedule.every().day.at("17:02").do(Update)
 
     # Запуск планировщика
     while True:
         schedule.run_pending()
         time.sleep(1)
 
+
 if __name__ == "__main__":
-    schedule_update()
+    schedule_thread = threading.Thread(target=schedule_update)
+    schedule_thread.start()
+    while True:
+        print("demka")
+        time.sleep(1)
