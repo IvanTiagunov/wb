@@ -63,3 +63,10 @@ class Commissions(SQLModel, table=True):
     product_name: str = Field(primary_key=True)
     wb_commission: int
     wb_commission_seller: int
+
+class SellerCalculations(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    articul: int
+    sells: int
+    cost: int
+    date: datetime

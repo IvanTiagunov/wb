@@ -1,8 +1,11 @@
 import datetime
+import time
 
 import requests
 import json
 
+import schedule
+from sqlalchemy import text
 from sqlmodel import Session, select
 
 from app.models.db import engine
@@ -169,6 +172,23 @@ def fill_comissions():
     excel_file_path = PATH_TO_XLSX
     df = pd.read_excel(excel_file_path)
     df.to_sql('commissions', engine, index=False, if_exists='replace')
+
+def get_sales_from_db():
+    with Session(engine) as session:
+        sql_query = "SELECT SellerCalculations.id, SellerCalculations.articul, SellerCalculations.sells," \
+                    " SellerCalculations.cost, SellerCalculations.date, " \
+                    "Nomenclature.name FROM SellerCalculations" \
+                    " JOIN Nomenclature ON SellerCalculations.articul=Nomenclature.id"
+        result = session.execute(text(sql_query)).all()
+        return result
+
+def start_fill():
+    schedule.every().day.at("04:00").do(fill_db)
+
+    # Запуск планировщика
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
 if __name__ == "__main__":
     fill_db()
