@@ -30,21 +30,21 @@ class Nomenclature(SQLModel, table=True):
     category_id: int = Field(default=None, foreign_key="category.wb_id")
     root: int
     brand: str
-    brandId: int
-    siteBrandId: int
+    brand_id: int
+    site_brand_id: int
     name: str
     supplier: str
-    supplierId: int
-    supplierRating: float
-    priceU: int
-    salePriceU: int
+    supplier_id: int
+    supplier_rating: float
+    price_u: int
+    sale_price_u: int
     sale: int
-    logistricsCost: Optional[int]
-    returnCost: Optional[int]
-    diffPrice: bool
+    logistrics_cost: Optional[int]
+    return_cost: Optional[int]
+    diff_price: bool
     pics: int
     rating: float
-    reviewRating: float
+    review_rating: float
     feedbacks: int
     volume: int
 

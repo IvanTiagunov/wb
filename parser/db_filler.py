@@ -60,38 +60,42 @@ def fill_categories():
     # Child
     # id, parent, name, seo, url, shard, query
 
-def fill_first_ten_categories_nomenclature():
-    skip = 1
+def fill_first_hundrer_categories_nomenclature():
+    skip = 0
     bad_categories_count = 0
-    while skip != 10:
+    while skip != 100:
         category = get_category(skip=skip+bad_categories_count, limit=1)
         try:
             # не можем выполнить запрос для самых верхних категорий
             # например первая категория shard=blackhole, cat=306
-            fill_nomenclature(shard=category.shard, cat=category.query)
+            fill_nomenclature(pages=5, shard=category.shard, cat=category.query)
             skip += 1
         except Exception:
             bad_categories_count +=1
 
-def fill_db():
-    #fill_categories()
-    #fill_first_ten_categories_nomenclature()
-    # заполняем товары по первым 10 категориям
+
+def fill_amount_6000():
     date = datetime.datetime.now()
     skip = 0
     limit = 10
-    while skip < 1000:
+    while skip < 6000:
         with Session(engine) as session:
             query = select(Nomenclature).offset(skip).limit(limit)
             nomenclatures = session.exec(query).all()
             nms_list = [str(nm.id) for nm in nomenclatures]
             nms = ";".join(nms_list)
             fill_amount(nm_ids=nms, date=date)
-        skip+=10
+        skip += 10
+
+def fill_db():
+    #fill_categories()
+    # заполняем товары по первым 100 категориям
+    #fill_first_hundrer_categories_nomenclature()
+    fill_amount_6000()
 
 
 def fill_nomenclature(pages=1, shard="sweatshirts_hoodies", cat="cat=8141"):
-    page_number = 10
+    page_number = 1
     while page_number <= pages:
         noms_url = NOMS.substitute(shard=shard, cat=cat, page_number=page_number)
         response = requests.get(noms_url,
@@ -110,21 +114,21 @@ def fill_nomenclature(pages=1, shard="sweatshirts_hoodies", cat="cat=8141"):
                 category_id=cat[4:],
                 root=nom.get("root"),
                 brand=nom.get("brand"),
-                brandId=nom.get("brandId"),
-                siteBrandId=nom.get("siteBrandId"),
+                brand_id=nom.get("brandId"),
+                site_brand_id=nom.get("siteBrandId"),
                 name=nom.get("name"),
                 supplier=nom.get("supplier"),
-                supplierId=nom.get("supplierId"),
-                supplierRating=nom.get("supplierRating"),
-                priceU=nom.get("priceU"),
-                salePriceU=nom.get("salePriceU"),
+                supplier_id=nom.get("supplierId"),
+                supplier_rating=nom.get("supplierRating"),
+                price_u=nom.get("priceU"),
+                sale_price_u=nom.get("salePriceU"),
                 sale=nom.get("sale"),
-                logistricsCost=nom.get("logistricsCost"),
-                returnCost=nom.get("returnCost"),
-                diffPrice=nom.get("diffPrice"),
+                logistrics_cost=nom.get("logistricsCost"),
+                return_cost=nom.get("returnCost"),
+                diff_price=nom.get("diffPrice"),
                 pics=nom.get("pics"),
                 rating=nom.get("rating"),
-                reviewRating=nom.get("reviewRating"),
+                review_rating=nom.get("reviewRating"),
                 feedbacks=nom.get("feedbacks"),
                 volume=nom.get("volume")
             )
@@ -182,6 +186,43 @@ def get_sales_from_db():
         result = session.execute(text(sql_query)).all()
         return result
 
+def get_db_sales_by_category():
+    with Session(engine) as session:
+        sql_query = "SELECT sc.articul, sc.sells, sc.cost, nm.name, nm.category_id " \
+                    "FROM SellerCalculations as sc " \
+                    f"JOIN Nomenclature as nm ON nm.id=sc.articul " \
+                    f"WHERE sc.sells > 0 " \
+                    f"ORDER BY sc.sells DESC"
+        result = session.execute(text(sql_query)).all()
+        return result
+
+def get_analitics_by_articul(articul):
+    with Session(engine) as session:
+        sql_query = "SELECT nm.id, nm.name, nm.category_id, nm.supplier, nm.supplier_rating, nm.sale_price_u," \
+                    " nm.rating, nm.review_rating, nm.feedbacks " \
+                    "FROM Nomenclature as nm " \
+                    f"WHERE nm.id={articul}"
+        result = session.execute(text(sql_query)).all()
+        return result
+
+def get_noms_list(limit, offset):
+    with Session(engine) as session:
+        sql_query = f"SELECT id, name FROM Nomenclature LIMIT {limit} OFFSET {offset}"
+        result = session.execute(text(sql_query)).all()
+        return result
+def get_categories_calc_list():
+    with Session(engine) as session:
+        sql_query = "SELECT DISTINCT category FROM Commissions"
+        result = session.execute(text(sql_query)).all()
+        return result
+
+def get_subcategories_calc_list(category:str):
+    with Session(engine) as session:
+        sql_query = "SELECT category, product_name, wb_commission, wb_commission_seller FROM Commissions" \
+                    f" WHERE category='{category}'"
+        result = session.execute(text(sql_query)).all()
+        return result
+
 def start_fill():
     schedule.every().day.at("04:00").do(fill_db)
 
@@ -193,10 +234,10 @@ def start_fill():
 if __name__ == "__main__":
     fill_db()
     # skip = 0
-    # limit = 10
+    # limit = 700000
     # with Session(engine) as session:
     #     query = select(Amount).offset(skip).limit(limit)
     #     result = session.exec(query).all()
-    #     print(result)
+    #     print(len(result))
     #fill_comissions()
 
